@@ -13,6 +13,13 @@ const BACKGROUND_MUSIC_PREF_KEY = "filboBackgroundMusicMuted";
 let inactivityTimerId = null;
 let backgroundMusicFadeRafId = null;
 
+// Embed mode (?embed=1): used when the kiosk is shown inside the portfolio case study.
+// Starts on the light Welcome screen, skips the two large intro videos (first video, namaste)
+// and never auto-starts background music, so it loads fast inside someone else's page.
+// The kiosk at the fair runs without the parameter and behaves exactly as before.
+const EMBED_MODE = new URLSearchParams(window.location.search).get("embed") === "1";
+if (EMBED_MODE) state.screen = "welcome";
+
 state.bgMusicMuted = loadBackgroundMusicMutedPreference();
 state.bgMusicPlaying = false;
 state.bgMusicHasTrustedInteraction = false;
@@ -256,6 +263,11 @@ function enableBackgroundMusicForHomeTransition() {
 }
 
 function enterIdleIntroLoop() {
+  if (EMBED_MODE) {
+    // No heavy attract video when embedded: idle simply returns to Welcome.
+    if (state.screen !== "welcome") navigateToHomeScreen();
+    return;
+  }
   const shouldRerender = state.screen !== "attract" || !state.introLoopMode;
 
   state.screen = "attract";
@@ -277,7 +289,7 @@ function navigateToHomeScreen({ autoEnableMusic = false } = {}) {
   state.selectedZone = null;
   state.detailsZone = null;
   state.helpFilter = null;
-  if (autoEnableMusic) enableBackgroundMusicForHomeTransition();
+  if (autoEnableMusic && !EMBED_MODE) enableBackgroundMusicForHomeTransition();
   rerender();
 }
 
@@ -1642,7 +1654,7 @@ document.addEventListener("click", (e) => {
   }
 
   if (action === "begin") {
-    state.screen = "namaste";
+    state.screen = EMBED_MODE ? "explore" : "namaste";
     state.selectedZone = null;
     state.detailsZone = null;
     state.helpFilter = null;
