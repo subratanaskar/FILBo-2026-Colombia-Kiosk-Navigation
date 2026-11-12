@@ -1451,6 +1451,27 @@ function updateMapActiveBadge() {
     .join("");
 }
 
+// Fallback timers for the intro/loader screens, keyed by the screen that set them.
+// Without this, a safety timer set on "namaste" could fire later while the visitor is
+// already on the map and yank them back to "explore".
+const screenFallbackTimers = {};
+
+function scheduleScreenFallback(screen, fn, delayMs) {
+  window.clearTimeout(screenFallbackTimers[screen]);
+  screenFallbackTimers[screen] = window.setTimeout(fn, delayMs);
+}
+
+function makeScreenAdvance(fromScreen, toScreen) {
+  return () => {
+    // Only advance if we are still on the screen that scheduled this.
+    if (state.screen !== fromScreen) return;
+    window.clearTimeout(screenFallbackTimers[fromScreen]);
+    delete screenFallbackTimers[fromScreen];
+    state.screen = toScreen;
+    rerender();
+  };
+}
+
 function afterRender() {
   updateBackgroundMusicToggleUi();
 
@@ -1479,14 +1500,11 @@ function afterRender() {
   if (state.screen === "namaste") {
     const video = document.getElementById("namasteVideo");
     if (video) {
-      const goNext = () => {
-        state.screen = "explore";
-        rerender();
-      };
+      const goNext = makeScreenAdvance("namaste", "explore");
       video.addEventListener("ended", goNext, { once: true });
-      window.setTimeout(goNext, 20000);
+      scheduleScreenFallback("namaste", goNext, 20000);
       video.play().catch(() => {
-        window.setTimeout(goNext, 800);
+        scheduleScreenFallback("namaste", goNext, 800);
       });
     }
   }
@@ -1498,16 +1516,13 @@ function afterRender() {
       video.playbackRate = 3;
       video.defaultPlaybackRate = 3;
 
-      const goNext = () => {
-        state.screen = "explore";
-        rerender();
-      };
+      const goNext = makeScreenAdvance("loading", "explore");
       video.addEventListener("ended", goNext, { once: true });
       // Safety timeout in case the video can't play.
-      window.setTimeout(goNext, 7000);
+      scheduleScreenFallback("loading", goNext, 7000);
       video.play().catch(() => {
         // If autoplay is blocked for some reason, proceed quickly.
-        window.setTimeout(goNext, 1200);
+        scheduleScreenFallback("loading", goNext, 1200);
       });
     }
   }
@@ -1519,14 +1534,11 @@ function afterRender() {
       video.playbackRate = 3;
       video.defaultPlaybackRate = 3;
 
-      const goNext = () => {
-        state.screen = "map";
-        rerender();
-      };
+      const goNext = makeScreenAdvance("kiosk_loading", "map");
       video.addEventListener("ended", goNext, { once: true });
-      window.setTimeout(goNext, 9000);
+      scheduleScreenFallback("kiosk_loading", goNext, 9000);
       video.play().catch(() => {
-        window.setTimeout(goNext, 1200);
+        scheduleScreenFallback("kiosk_loading", goNext, 1200);
       });
     }
   }
