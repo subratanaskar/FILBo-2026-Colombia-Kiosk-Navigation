@@ -1,0 +1,9 @@
+{
+  "name": "filbo-2026-kiosk",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "validate": "node ./scripts/validate.js",
+    "check-all": "node ./scripts/validate.js"
+  }
+}
